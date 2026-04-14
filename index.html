@@ -173,6 +173,15 @@ function handleFilter(elId,t){
 function filterByTypes(list,f){if(!f.length)return list;if(f.length===1)return list.filter(p=>p.types.includes(f[0]));return list.filter(p=>f.every(x=>p.types.includes(x)))}
 
 // OPPONENT
+function getRecentOpps(){try{return JSON.parse(localStorage.getItem('poke_recent_opps')||'[]')}catch(e){return[]}}
+function addRecentOpp(dex,form){
+  var recent=getRecentOpps();
+  var id=dex+'_'+form;
+  recent=recent.filter(function(r){return r!==id});
+  recent.unshift(id);
+  if(recent.length>20)recent=recent.slice(0,20);
+  localStorage.setItem('poke_recent_opps',JSON.stringify(recent));
+}
 function renderGrid(){
   const s=document.getElementById('search-input').value.trim().toLowerCase();
   const g=document.getElementById('pokemon-grid');
@@ -180,11 +189,25 @@ function renderGrid(){
   if(s)f=f.filter(p=>p.name.toLowerCase().includes(s));
   const ids=new Set(selectedOpponents.map(pokeId));
   f=f.filter(p=>!ids.has(pokeId(p)));
+  if(!s&&!activeTypeFilters.length){
+    var recent=getRecentOpps();
+    var recentSet={};
+    recent.forEach(function(id,i){recentSet[id]=i});
+    f.sort(function(a,b){
+      var ai=recentSet[pokeId(a)],bi=recentSet[pokeId(b)];
+      var aHas=ai!==undefined,bHas=bi!==undefined;
+      if(aHas&&!bHas)return -1;
+      if(!aHas&&bHas)return 1;
+      if(aHas&&bHas)return ai-bi;
+      return 0;
+    });
+  }
   if(!f.length){g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#5a4030;font-size:12px">일치하는 포켓몬이 없습니다</div>';return}
   g.innerHTML=f.map(p=>`<div class="poke-card" onclick="selPoke(${p.dex},${p.form})"><img src="${imgSrc(p)}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'"><div class="name">${p.name}</div><div class="types">${p.types.map(typeBadge).join('')}</div><div class="stat-tags">${statTags(p)}</div></div>`).join('');
 }
 function selPoke(d,f){
   if(selectedOpponents.length>=6)return;const m=POKEMON.find(p=>p.dex===d&&p.form===f);if(!m)return;
+  addRecentOpp(d,f);
   selectedOpponents.push(m);activeTypeFilters=[];document.getElementById('search-input').value='';
   renderFilterBtns(activeTypeFilters,'type-filters');renderGrid();renderSel();renderCoverage();
 }
@@ -335,6 +358,30 @@ function renderAtk(el){
 
 
 
+  // Separator + weakness row
+  h+='<tr><td colspan="'+(opps.length+1)+'" style="padding:0;border-bottom:3px solid rgba(255,136,68,0.3)"></td></tr>';
+  h+='<tr style="background:rgba(255,136,68,0.04)"><td style="text-align:left;padding:6px"><span style="font-weight:700;color:#ff8844;font-size:11px">약점 타입</span></td>';
+  opps.forEach(function(opp){
+    var prof=getOppWeakResist(opp.types,opp.ability);
+    var badges='';
+    if(prof.w4.length) badges+='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:3px;justify-content:center">'+prof.w4.map(function(t){return effBadge(4,t)}).join('')+'</div>';
+    if(prof.w2.length) badges+='<div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center">'+prof.w2.map(function(t){return effBadge(2,t)}).join('')+'</div>';
+    if(!badges) badges='<span style="color:#555;font-size:10px">없음</span>';
+    h+='<td style="padding:6px;line-height:1.8;vertical-align:top">'+badges+'</td>';
+  });
+  h+='</tr>';
+  h+='<tr style="background:rgba(52,211,153,0.03)"><td style="text-align:left;padding:6px"><span style="font-weight:700;color:#34d399;font-size:11px">반감 타입</span></td>';
+  opps.forEach(function(opp){
+    var prof=getOppWeakResist(opp.types,opp.ability);
+    var badges='';
+    if(prof.imm.length) badges+='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:3px;justify-content:center">'+prof.imm.map(function(t){return effBadge(0,t)}).join('')+'</div>';
+    if(prof.r4.length) badges+='<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:3px;justify-content:center">'+prof.r4.map(function(t){return effBadge(0.25,t)}).join('')+'</div>';
+    if(prof.r2.length) badges+='<div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center">'+prof.r2.map(function(t){return effBadge(0.5,t)}).join('')+'</div>';
+    if(!badges) badges='<span style="color:#555;font-size:10px">없음</span>';
+    h+='<td style="padding:6px;line-height:1.8;vertical-align:top">'+badges+'</td>';
+  });
+  h+='</tr>';
+
   h+='</tbody></table></div>';
   el.innerHTML=h;
 }
@@ -348,6 +395,25 @@ function defCellHtml(mult, atkType){
   if(mult<=0.25) return`<div style="background:rgba(52,211,153,0.15);border-radius:6px;padding:3px 2px"><span style="font-weight:900;color:#22c55e;font-size:12px">¼x</span><div style="margin-top:1px">${typeBadge(atkType)}</div></div>`;
   if(mult<1) return`<div style="background:rgba(52,211,153,0.1);border-radius:6px;padding:3px 2px"><span style="font-weight:800;color:#34d399;font-size:12px">½x</span><div style="margin-top:1px">${typeBadge(atkType)}</div></div>`;
   return`<span style="color:#555;font-size:11px">1x</span>`;
+}
+function defCellHtmlAll(results){
+  results=results.slice().sort(function(a,b){return b.mult-a.mult});
+  var filtered=results.filter(function(r){return r.mult!==1});
+  if(!filtered.length) return'<span style="color:#555;font-size:10px">등배</span>';
+  var best=Math.max.apply(null,filtered.map(function(r){return r.mult}));
+  var worst=Math.min.apply(null,filtered.map(function(r){return r.mult}));
+  var bg=best>=4?'rgba(255,68,68,0.2)':best>=2?'rgba(255,136,68,0.12)':worst===0?'rgba(96,165,250,0.1)':worst<1?'rgba(52,211,153,0.08)':'transparent';
+  var html='<div style="background:'+bg+';border-radius:6px;padding:4px 3px;display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-items:center">';
+  filtered.forEach(function(r){
+    var c,lbl;
+    if(r.mult>=4){c='#ff4444';lbl='4x'}
+    else if(r.mult>=2){c='#ff8844';lbl='2x'}
+    else if(r.mult===0){c='#60a5fa';lbl='무효'}
+    else{c='#34d399';lbl=effLabel(r.mult)}
+    html+='<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px"><span style="font-weight:900;color:'+c+';font-size:12px">'+lbl+'</span>'+typeBadge(r.type)+'</span>';
+  });
+  html+='</div>';
+  return html;
 }
 
 function renderSpeed(el){
@@ -452,16 +518,12 @@ function renderDef(el){
     const mc=myMonColor(mi);
     const prof=getTypeProfile(p.types, p.ability);
     const hasLevitate=p.ability==='부유';
-    const cells=opps.map(opp=>{
-      let worst={mult:0,type:null};
-      opp.types.forEach(at=>{
-        let mult=totalEff(at,p.types);
-        if(hasLevitate&&at==='땅')mult=0;
-        if(mult>worst.mult){worst={mult,type:at}}
-      });
-      return worst;
+    const cellsAll=opps.map(opp=>{
+      var results=opp.types.map(at=>{var m=totalEff(at,p.types);if(hasLevitate&&at==='땅')m=0;return{type:at,mult:m}});
+      var maxMult=Math.max.apply(null,results.map(r=>r.mult));
+      return{results,maxMult};
     });
-    const dangerCount=cells.filter(c=>c.mult>=2).length;
+    const dangerCount=cellsAll.filter(c=>c.maxMult>=2).length;
     const dangerLabel=dangerCount>0?dangerCount+'개 약점':'안전';
     const dangerStyle=dangerCount>=3?'color:#ff4444;font-weight:900':dangerCount>0?'color:#ff8844;font-weight:700':'color:#34d399;font-weight:700';
 
@@ -488,7 +550,7 @@ function renderDef(el){
           </div>
         </div>
       </td>
-      ${cells.map(c=>c.type?`<td>${defCellHtml(c.mult,c.type)}</td>`:`<td><span style="color:#555;font-size:11px">1x</span></td>`).join('')}
+      ${cellsAll.map(c=>`<td>${defCellHtmlAll(c.results)}</td>`).join('')}
       <td><span style="${dangerStyle};font-size:11px">${dangerLabel}</span></td>
       <td style="text-align:left;line-height:1.6">${weakHtml}</td>
       <td style="text-align:left;line-height:1.6">${resHtml}</td>
