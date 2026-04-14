@@ -544,7 +544,13 @@ function saveTeamToLS(){
 function loadTeamFromLS(){
   try{
     const raw=localStorage.getItem('poke_myteam');
-    if(!raw)return;
+    if(!raw){
+      const defMon=POKEMON.find(p=>p.dex===655&&p.form===1);
+      if(defMon)myTeam=[{mon:defMon,moves:["불꽃","풀","에스퍼","페어리"]}];
+      const defOpp=POKEMON.find(p=>p.dex===154&&p.form===1);
+      if(defOpp)selectedOpponents=[defOpp];
+      return;
+    }
     const data=JSON.parse(raw);
     myTeam=data.map(d=>{const mon=POKEMON.find(p=>p.dex===d.dex&&p.form===d.form);return mon?{mon,moves:d.moves||[]}:null}).filter(Boolean);
   }catch(e){}
@@ -587,7 +593,7 @@ renderMyTeam=function(){_origRenderMyTeam();saveTeamToLS();renderPresets()}
 function init(){
   loadTeamFromLS();
   renderFilterBtns(activeTypeFilters,'type-filters');
-  renderGrid();renderSel();renderMyTeam();renderPresets();
+  renderGrid();renderSel();renderMyTeam();renderPresets();renderCoverage();
 }
 init();
 </script>
