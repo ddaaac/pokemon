@@ -12,9 +12,9 @@ h1{font-size:24px;font-weight:900;margin:4px 0 0;background:linear-gradient(90de
 .subtitle{font-size:11px;letter-spacing:3px;color:#a08060}
 .card{background:rgba(255,255,255,0.04);border-radius:14px;padding:12px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.06)}
 .card-title{font-size:11px;color:#a08060;font-weight:700;margin-bottom:8px}
-.type-btn{border:2px solid transparent;border-radius:14px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;color:#a08060;background:rgba(255,255,255,0.06)}
-.type-btn.active{color:#fff}
-.type-btn:hover{opacity:.85}
+.type-btn{border:2px solid transparent;border-radius:14px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,0.3)}
+.type-btn.active{box-shadow:0 0 0 2px #fff,0 0 8px rgba(255,255,255,0.3)}
+.type-btn:hover{opacity:.85;transform:scale(1.05)}
 .type-filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
 .pokemon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;max-height:350px;overflow-y:auto;padding:4px}
 .pokemon-grid::-webkit-scrollbar{width:6px}
@@ -163,7 +163,7 @@ function toggleFilter(type,arr,renderFn,elId){
 }
 function renderFilterBtns(arr,elId){
   const el=document.getElementById(elId);if(!el)return;
-  el.innerHTML=TYPES.map(t=>{const a=arr.includes(t);return`<button class="type-btn${a?' active':''}" style="${a?'background:'+TC[t]+';border-color:'+TC[t]:''}" onclick="handleFilter('${elId}','${t}')">${t}</button>`}).join('');
+  el.innerHTML=TYPES.map(t=>{const a=arr.includes(t);return`<button class="type-btn${a?' active':''}" style="background:${TC[t]};border-color:${a?'#fff':'transparent'}" onclick="handleFilter('${elId}','${t}')">${a?'✓ ':''}${t}</button>`}).join('');
 }
 function handleFilter(elId,t){
   if(elId==='type-filters')toggleFilter(t,activeTypeFilters,renderGrid,'type-filters');
@@ -272,7 +272,7 @@ function renderMyTeam(){
   const area=document.getElementById('move-assign-area');
   if(editingMovesFor>=0&&editingMovesFor<myTeam.length){
     const m=myTeam[editingMovesFor],p=m.mon;
-    area.innerHTML=`<div class="move-assign-panel"><div style="font-size:12px;font-weight:700;margin-bottom:6px">🎯 ${p.name} 기술 타입 선택 (${m.moves.length}/4)</div><div style="display:flex;flex-wrap:wrap;gap:4px">${TYPES.map(t=>{const s=m.moves.includes(t),full=m.moves.length>=4&&!s;return`<button class="type-btn${s?' active':''}" style="${s?'background:'+TC[t]+';border-color:'+TC[t]:''};${full?'opacity:0.3;cursor:default':''}" onclick="${full?'':'toggleMove('+editingMovesFor+',&quot;'+t+'&quot;)'}">${t}</button>`}).join('')}</div><button onclick="editingMovesFor=-1;renderMyTeam()" style="margin-top:8px;padding:4px 12px;border-radius:6px;border:none;background:rgba(255,255,255,0.1);color:#a08060;font-size:11px;cursor:pointer;font-weight:700">완료</button></div>`;
+    area.innerHTML=`<div class="move-assign-panel"><div style="font-size:12px;font-weight:700;margin-bottom:6px">🎯 ${p.name} 기술 타입 선택 (${m.moves.length}/4)</div><div style="display:flex;flex-wrap:wrap;gap:4px">${TYPES.map(t=>{const s=m.moves.includes(t),full=m.moves.length>=4&&!s;return`<button class="type-btn${s?' active':''}" style="background:${TC[t]};border-color:${s?'#fff':'transparent'};${full?'opacity:0.3;cursor:default':''}" onclick="${full?'':'toggleMove('+editingMovesFor+',&quot;'+t+'&quot;)'}">${s?'✓ ':''}${t}</button>`}).join('')}</div><button onclick="editingMovesFor=-1;renderMyTeam()" style="margin-top:8px;padding:4px 12px;border-radius:6px;border:none;background:rgba(255,255,255,0.1);color:#a08060;font-size:11px;cursor:pointer;font-weight:700">완료</button></div>`;
   }else area.innerHTML='';
 }
 
