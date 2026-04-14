@@ -179,7 +179,7 @@ function addRecentOpp(dex,form){
   var id=dex+'_'+form;
   recent=recent.filter(function(r){return r!==id});
   recent.unshift(id);
-  if(recent.length>20)recent=recent.slice(0,20);
+  if(recent.length>40)recent=recent.slice(0,40);
   localStorage.setItem('poke_recent_opps',JSON.stringify(recent));
 }
 function renderGrid(){
