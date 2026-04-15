@@ -1,0 +1,6 @@
+pokemon_data.json
+move_names_mapping.json
+ability_names_mapping.json
+pokemon_names_mapping.json
+crawl_pokemon.py
+debug_*.html
